@@ -249,6 +249,10 @@
         <div class="events_label">Date Range:</div>
         <div id="dates" class="date_select inline block"></div>
       </div>
+      <div class="service">
+        <div class="events_label">Service Type:</div>
+        <div id="serviceSelect" class="date_select inline block"></div>
+      </div>
       <div id="events">
         <div class="events_label">Funnel Steps:</div>
         <div id="add"></div>
@@ -292,6 +296,27 @@
       // only these events will be included, use [] if you want all events to be included
       var event_restrict = [];
       //ex: var event_restrict = ['KPI: App Launch', 'DataCollectionAcceptance', 'KPI: Shutter pressed'];
+      
+      // Add custom dropdown for service type
+      var options = {
+        items: [
+          {label: '--', value: null},
+          {label: 'Go-Box', value: 'Go-Box'},
+          {label: 'Go-Busway', value: 'Go-Busway'},
+          {label: 'Go-Car', value: 'Go-Car'},
+          {label: 'Go-Clean', value: 'Go-Clean'},
+          {label: 'Go-Food', value: 'Go-Food'},
+          {label: 'Go-Glam', value: 'Go-Glam'},
+          {label: 'Go-Mart', value: 'Go-Mart'},
+          {label: 'Go-Massage', value: 'Go-Massage'},
+          {label: 'Go-Med', value: 'Go-Med'},
+          {label: 'Go-Ride', value: 'Go-Ride'},
+          {label: 'Go-Send', value: 'Go-Send'},
+          {label: 'Go-Shop', value: 'Go-Shop'},
+          {label: 'Go-Tix', value: 'Go-Tix'},
+        ]
+      };
+      var serviceTypeSelect = $('#serviceSelect').MPSelect(options);
       
       // add events
       var $events = $('#events');
@@ -374,16 +399,19 @@
 
         // set up parameters
         var dateVal = $('#dates').val();
+        var serviceSelect = serviceTypeSelect.MPSelect('value');
+
         var queryParams = {
             event_list: event_list,
             path_length: path_length,
             from_date: date_to_string(dateVal.from),
             to_date: date_to_string(dateVal.to),
             event_restrict: event_restrict,
+            prop_filter: serviceSelect
           };
         var script = $('#jql').html();
         script = $.trim(script);
-        
+
         MP.api.jql(script, queryParams).done(function(results) {
           jqlResult = results[0];
           for (var i = 0; i < event_list.length; i++) {
@@ -686,12 +714,19 @@
       var EVENT_LIST = params.event_list;
       var PATH_LENGTH =  params.path_length || 3;
       var RESTRICT_EVENTS = params.event_restrict;
+      var PROP_FILTER = params.prop_filter;
       
       function main() {
           return Events({
               from_date: params.from_date,
               to_date: params.to_date,
-              event_selectors: restrict_events(RESTRICT_EVENTS)
+              event_selectors: restrict_events(RESTRICT_EVENTS, PROP_FILTER)
+          })
+          .filter(function(event){
+            if(PROP_FILTER !== null) {
+              return event.properties.ServiceType == PROP_FILTER;
+            }
+            return event;
           })
           .groupByUser(function(state, events) {
               // collect the event list of each user, if they entered the funnel
@@ -769,7 +804,7 @@
               }
           }
           
-          function restrict_events(event_restrict) {
+          function restrict_events(event_restrict, prop_filter) {
             var ret = [];
             for(i=0; i<event_restrict.length; i++) {
               ret.push({event: event_restrict[i]});
